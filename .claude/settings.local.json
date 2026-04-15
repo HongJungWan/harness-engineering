@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /c/Users/Hong/Desktop/harness-engineering log --oneline -5)",
+      "Bash(git:*)",
+      "WebSearch",
+      "Bash(mkdir:*)",
+      "Bash(go mod:*)",
+      "Bash(go get:*)",
+      "Bash(go build:*)",
+      "Bash(go vet:*)",
+      "Bash(bash ci/arch-check.sh)"
+    ]
+  }
+}
