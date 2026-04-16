@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "plan_sha256": "ea00b14a2bac975b201e40f08187b92da4221193fbdcf6d03b1de29d5c951314",
+  "current_task": null,
+  "tasks": {
+    "SHARED-001": {
+      "state": "pending",
+      "attempts": 0
+    },
+    "SHARED-002": {
+      "state": "pending",
+      "attempts": 0
+    },
+    "BALANCE-001": {
+      "state": "pending",
+      "attempts": 0
+    },
+    "BALANCE-002": {
+      "state": "pending",
+      "attempts": 0
+    },
+    "ORDER-001": {
+      "state": "pending",
+      "attempts": 0
+    },
+    "ORDER-002": {
+      "state": "pending",
+      "attempts": 0
+    },
+    "ORDER-003": {
+      "state": "pending",
+      "attempts": 0
+    },
+    "OUTBOX-001": {
+      "state": "pending",
+      "attempts": 0
+    },
+    "OUTBOX-002": {
+      "state": "pending",
+      "attempts": 0
+    },
+    "PRESENT-001": {
+      "state": "pending",
+      "attempts": 0
+    },
+    "WIRE-001": {
+      "state": "pending",
+      "attempts": 0
+    },
+    "TEST-001": {
+      "state": "pending",
+      "attempts": 0
+    },
+    "TEST-002": {
+      "state": "pending",
+      "attempts": 0
+    }
+  },
+  "updated_at": "2026-04-16T01:23:29Z"
+}

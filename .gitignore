@@ -9,3 +9,11 @@ coverage.out
 *.out
 .env
 vendor/
+
+# harness ephemeral artifacts
+.claude/harness/logs/
+.claude/harness/last-failure.json
+.claude/harness/blocked/
+
+# user-local Claude Code settings
+.claude/settings.local.json

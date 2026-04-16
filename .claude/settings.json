@@ -1,0 +1,8 @@
+{
+  "hooks": {},
+  "permissions": {
+    "allow": [
+      "Bash(.claude/harness/scripts/*.sh:*)"
+    ]
+  }
+}

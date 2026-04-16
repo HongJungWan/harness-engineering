@@ -9,7 +9,34 @@
       "Bash(go get:*)",
       "Bash(go build:*)",
       "Bash(go vet:*)",
-      "Bash(bash ci/arch-check.sh)"
+      "Bash(bash ci/arch-check.sh)",
+      "Bash(wc *)",
+      "Bash(yq --version)",
+      "Bash(python3 -c 'import yaml; print\\(\"PyYAML OK:\", yaml.__version__\\)')",
+      "Bash(brew --prefix)",
+      "Bash(chmod +x *)",
+      "Bash(python3 .claude/harness/lib/plan-to-json.py docs/01_Plan.md)",
+      "Bash(.claude/harness/scripts/validate-plan.sh --all)",
+      "Bash(echo \"exit=$?\")",
+      "Bash(.claude/harness/scripts/validate-plan.sh internal/order/domain/order.go)",
+      "Bash(.claude/harness/scripts/validate-plan.sh /tmp/random.md)",
+      "Bash(.claude/harness/scripts/next-task.sh)",
+      "Bash(echo \"---exit=$?---\")",
+      "Bash(.claude/harness/scripts/check.sh --all)",
+      "Bash(bash --version)",
+      "Bash(.claude/harness/scripts/check.sh --only DDD-1)",
+      "Bash(echo \"---DDD-1 alone: exit=$?---\")",
+      "Bash(.claude/harness/scripts/check.sh internal/order/domain/order.go)",
+      "Bash(echo \"---glob match: exit=$?---\")",
+      "Bash(grep -v '^$')",
+      "Bash(tail -3 .claude/harness/logs/hook-*.log)",
+      "Bash(bash -n .claude/harness/scripts/commit-and-advance.sh)",
+      "Bash(.claude/harness/scripts/commit-and-advance.sh)",
+      "Bash(awk ' *)"
     ]
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "chrome-devtools"
+  ]
 }
