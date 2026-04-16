@@ -128,6 +128,35 @@ Go 1.25 · MySQL 8.0 · Apache Kafka (KRaft) · Docker · sqlx · sarama · shop
 
 ---
 
+## 하네스 런타임 (Phase 2)
+
+위 Plan → Code → Hook → Fix 루프가 이제 **기계가 직접 실행하는 런타임**으로 존재한다. docs/01-04 는 단순한 가이드라인이 아니라, 매 Agent iteration 마다 스크립트가 파싱하는 **실행 가능한 계약(executable contract)** 이다.
+
+```
+.claude/
+├── settings.json                      # Claude Code hook 배선 (4개 이벤트 → 4개 스크립트)
+└── harness/
+    ├── state.json                     # task 상태 머신 (pending/in_progress/done/blocked)
+    ├── lib/
+    │   ├── common.sh                  # preflight + 경로 + atomic state I/O
+    │   └── plan-to-json.py            # 01_Plan.md yaml → JSON
+    └── scripts/
+        ├── next-task.sh               # UserPromptSubmit → 다음 task 선택 + 컨텍스트 주입
+        ├── validate-plan.sh           # PreToolUse → DAG 불변식 검증 (Plan.md 편집 시)
+        ├── check.sh                   # PostToolUse → 12 arch 규칙 + go-build/test/vet
+        └── commit-and-advance.sh      # Stop → scope-limited 커밋 + 상태 전이 + escalation
+```
+
+**한 iteration 의 흐름:**
+1. 사용자 프롬프트 제출 → `next-task.sh` 가 현재 task + exit_criteria 를 에이전트 컨텍스트에 주입
+2. 에이전트가 파일 편집 → `check.sh` 가 해당 파일에 적용되는 규칙만 즉시 검증
+3. 턴 종료 → `commit-and-advance.sh` 가 전체 규칙 통과 확인 후 **task 선언 파일만** 커밋 + 상태 전이
+4. 실패 시 → `last-failure.json` 에 기록, 다음 턴에 04_Fix.md 의 recipe 참조 주입, 3회 연속 실패 시 blocked 처리
+
+**도구 의존성:** `jq`, `python3` + `PyYAML` (preflight 에서 자동 확인)
+
+---
+
 ## 프로젝트 구조
 
 ```
@@ -158,7 +187,7 @@ internal/
 
 ## 빠른 시작
 
-**전제 조건:** Go 1.25+, Docker, Docker Compose
+**전제 조건:** Go 1.25+, Docker, Docker Compose, `jq`, `python3` + `PyYAML` (하네스용)
 
 ```bash
 git clone https://github.com/HongJungWan/harness-engineering.git
@@ -186,7 +215,8 @@ make build && make run  # 서버 실행 (:8080)
 
 | Phase | 문서 | 내용 |
 |---|---|---|
-| Plan | [`docs/01_Plan.md`](docs/01_Plan.md) | DDD 모델링, 상태 머신, 이벤트 카탈로그, TPS 4,000 대비, BDD 시나리오 6종 |
+| Design | [`docs/00_Design.md`](docs/00_Design.md) | DDD/EDA/고부하 설계 내러티브 + BDD 시나리오 6종 (배경 문서, 1회 읽기) |
+| Plan | [`docs/01_Plan.md`](docs/01_Plan.md) | Task DAG yaml + state.json 스키마 + next-task 알고리즘 + 13 부트스트랩 task |
 | Code | [`docs/02_Code.md`](docs/02_Code.md) | 디렉토리 제약, 패키지 의존성 규칙, 비관적 락 트랜잭션 플로우, 코딩 컨벤션 |
 | Hook | [`docs/03_Hook.md`](docs/03_Hook.md) | 테스트 인프라 설계, 동시성 barrier, Eventually 폴링, 6개 검증 Hook |
 | Fix | [`docs/04_Fix.md`](docs/04_Fix.md) | CI 체크리스트, 12개 자동 아키텍처 검증, 리뷰 프로세스 |

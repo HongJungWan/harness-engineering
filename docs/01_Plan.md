@@ -27,6 +27,9 @@ tasks:
         packages: [<pkg>, ...]
       - hook: go-test           # 선택: 지정 테스트만
         tests: [<TestName>, ...]
+    commit_subject: <STRING>   # optional: 커밋 subject (≤ 50자 권장, title 대신 사용)
+    commit_body: |             # optional: 커밋 body (bullet list 권장)
+      - ...
     blocking: false            # true 면 전이 실패 시 전체 큐 중단 (default false)
 ```
 
@@ -183,6 +186,12 @@ attempts: 1
 tasks:
   - id: SHARED-001
     title: "Shared domain — Money / AssetPair / DomainEvent / TxManager / EventProducer"
+    commit_subject: "Add shared-domain value objects and facades"
+    commit_body: |
+      - Money VO (shopspring/decimal + currency)
+      - AssetPair VO (base/quote)
+      - DomainEvent 인터페이스 + TxManager 인터페이스
+      - EventProducer facade 인터페이스
     deps: []
     files:
       creates:
@@ -199,6 +208,10 @@ tasks:
 
   - id: SHARED-002
     title: "Shared infra — SqlxTxManager + SaramaProducer facade"
+    commit_subject: "Add SqlxTxManager and SaramaProducer impl"
+    commit_body: |
+      - context 기반 sqlx 트랜잭션 관리자
+      - Sarama Kafka producer facade (acks=all, idempotent)
     deps: [SHARED-001]
     files:
       creates:
@@ -212,6 +225,12 @@ tasks:
 
   - id: BALANCE-001
     title: "Balance domain — aggregate + events + repo interface + errors"
+    commit_subject: "Add Balance aggregate with DeductAndLock"
+    commit_body: |
+      - Balance 엔티티 (available/locked 불변식)
+      - DeductAndLock, Unlock, SettleFill 메서드
+      - BalanceDeducted/BalanceRestored 도메인 이벤트
+      - BalanceRepository 인터페이스 + sentinel errors
     deps: [SHARED-001]
     files:
       creates:
@@ -225,6 +244,10 @@ tasks:
 
   - id: BALANCE-002
     title: "Balance MySQL repo — SELECT FOR UPDATE + outbox drain in same Tx"
+    commit_subject: "Add Balance MySQL repo with pessimistic lock"
+    commit_body: |
+      - SELECT ... FOR UPDATE 로 잔고 행 비관적 잠금
+      - Save() 에서 PullEvents → outbox INSERT 같은 Tx 보장
     deps: [BALANCE-001, SHARED-002]
     files:
       creates: [internal/balance/infrastructure/mysql_balance_repo.go]
@@ -234,6 +257,12 @@ tasks:
 
   - id: ORDER-001
     title: "Order domain — aggregate + state machine + events + repo interface"
+    commit_subject: "Add Order aggregate with state machine"
+    commit_body: |
+      - PENDING → ACCEPTED → FILLED/CANCELLED 상태 머신
+      - Accept/Fill/Cancel 가드 조건 + 불변식
+      - OrderPlaced/OrderCancelled 도메인 이벤트
+      - OrderRepository 인터페이스 + sentinel errors
     deps: [SHARED-001]
     files:
       creates:
@@ -247,6 +276,10 @@ tasks:
 
   - id: ORDER-002
     title: "Order MySQL repo — Save with outbox event drain"
+    commit_subject: "Add Order MySQL repo with outbox drain"
+    commit_body: |
+      - INSERT orders + PullEvents → outbox INSERT 같은 Tx
+      - UUIDv7 기반 주문 ID 생성
     deps: [ORDER-001, SHARED-002]
     files:
       creates: [internal/order/infrastructure/mysql_order_repo.go]
@@ -256,6 +289,11 @@ tasks:
 
   - id: ORDER-003
     title: "PlaceOrderUseCase — pessimistic lock, idempotency, cross-BC orchestration"
+    commit_subject: "Add PlaceOrder and CancelOrder use cases"
+    commit_body: |
+      - 비관적 락 10단계 플로우 (balance → order 순서)
+      - 멱등성 키 기반 중복 방어
+      - cross-BC 조합 (application 계층에서 인터페이스로)
     deps: [ORDER-002, BALANCE-002]
     files:
       creates:
@@ -269,6 +307,11 @@ tasks:
 
   - id: OUTBOX-001
     title: "Outbox repository + MySQL impl (FOR UPDATE SKIP LOCKED)"
+    commit_subject: "Add Outbox repo with SKIP LOCKED polling"
+    commit_body: |
+      - OutboxRepository 인터페이스 + IdempotencyRepository
+      - FetchPending: FOR UPDATE SKIP LOCKED 다중 워커 안전
+      - UpdateSent/UpdateFailed + stuck 이벤트 카운터
     deps: [SHARED-002]
     files:
       creates:
@@ -280,6 +323,12 @@ tasks:
 
   - id: OUTBOX-002
     title: "Relay worker — exponential backoff + stuck detection"
+    commit_subject: "Add Outbox relay worker"
+    commit_body: |
+      - 폴링 루프 (50ms, batch=100)
+      - Kafka produce → flush → SENT 마킹
+      - 지수 백오프 재시도 (base * 2^retryCount)
+      - 60초 주기 stuck 이벤트 감지 (PENDING > 5분)
     deps: [OUTBOX-001]
     files:
       creates: [internal/outbox/relay.go]
@@ -289,6 +338,11 @@ tasks:
 
   - id: PRESENT-001
     title: "Order HTTP handler + Kafka consumer (DLQ + idempotent)"
+    commit_subject: "Add Order HTTP handler and Kafka consumer"
+    commit_body: |
+      - chi 라우터 기반 PlaceOrder/GetOrder 핸들러
+      - DTO 변환 (domain entity 직접 노출 금지)
+      - IdempotentConsumer: processed_events dedup + DLQ 라우팅
     deps: [ORDER-003, OUTBOX-002]
     files:
       creates:
@@ -301,6 +355,12 @@ tasks:
 
   - id: WIRE-001
     title: "cmd/server/main.go — DI wiring, graceful shutdown, relay goroutines"
+    commit_subject: "Add server entry point with DI wiring"
+    commit_body: |
+      - 전체 DI 조립 (repos, usecases, handlers)
+      - N개 relay worker goroutine 생성
+      - SIGINT/SIGTERM graceful shutdown (15s timeout)
+      - config.go: caarlos0/env 기반 환경변수 파싱 + 검증
     deps: [PRESENT-001]
     files:
       creates: [cmd/server/main.go, internal/config/config.go]
@@ -310,6 +370,12 @@ tasks:
 
   - id: TEST-001
     title: "Acceptance — happy path + insufficient balance + cancellation"
+    commit_subject: "Add acceptance tests (happy, balance, cancel)"
+    commit_body: |
+      - TestMain: DI 조립 + CleanAll/SeedBalance 격리
+      - happy path: BUY LIMIT → ACCEPTED + 잔고 차감 + outbox
+      - insufficient balance: 에러 + 잔고 불변
+      - cancellation: CANCELLED + 잔고 복원 + outbox
     deps: [WIRE-001]
     files:
       creates:
@@ -324,6 +390,11 @@ tasks:
 
   - id: TEST-002
     title: "Acceptance — concurrent orders (10-goroutine barrier) + outbox guarantee + idempotency"
+    commit_subject: "Add concurrency, outbox, idempotency tests"
+    commit_body: |
+      - 10-goroutine barrier 동시 주문 → 잔고 보존 법칙 검증
+      - relay 중지 → 주문 → Kafka 없음 → relay 시작 → Kafka 도착
+      - 동일 eventId 20회 발행 → processed_events 1행
     deps: [TEST-001]
     files:
       creates:

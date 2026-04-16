@@ -178,6 +178,9 @@ HARNESS_PLAN_INVALID reason=<detail>
 
 # turn 미완료 (commit 없이 종료)
 HARNESS_TURN_INCOMPLETE task=<task-id>
+
+# scope 경고 (non-blocking — commit 은 scope 안 파일만 포함)
+HARNESS_SCOPE_WARNING reason=<key> [count=<n>] [files=<csv>]
 ```
 
 **파싱 regex** (Phase 2 파서가 기대하는 것):

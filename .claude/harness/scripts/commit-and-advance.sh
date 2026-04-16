@@ -110,15 +110,26 @@ _dump_blocked() {
 NOW=$(harness_now)
 
 if (( RC == 0 )); then
-    # 4a. SUCCESS --- commit + transition
+    # 4a. SUCCESS --- scoped commit + transition
     HOOKS_PASSED=$(grep -E '^HARNESS_HOOK_PASS' <<<"$OUTPUT" \
         | awk '{for(i=1;i<=NF;i++) if($i ~ /^name=/){sub("name=","",$i); print tolower($i)}}' \
         | paste -sd, -)
     ATTEMPTS=$(jq -r --arg id "$TASK_ID" '.tasks[$id].attempts // 1' <<<"$STATE")
     CTYPE=$(_commit_type "$TASK_ID")
-    TITLE=$(jq -r '.title' <<<"$TASK")
 
-    # write state.json FIRST so `git add -A` picks it up in the same commit
+    # --- commit subject (from commit_subject field, fallback to title) ---
+    RAW_SUBJECT=$(jq -r '.commit_subject // .title' <<<"$TASK")
+    HEADER_LEN=$((${#CTYPE} + 2 + ${#TASK_ID} + 2))
+    MAX_SUBJ=$((72 - HEADER_LEN))
+    SUBJECT="$RAW_SUBJECT"
+    if (( ${#RAW_SUBJECT} > MAX_SUBJ )); then
+        SUBJECT="${RAW_SUBJECT:0:$((MAX_SUBJ - 1))}…"
+    fi
+
+    # --- commit body (from commit_body field, optional) ---
+    COMMIT_BODY=$(jq -r '.commit_body // ""' <<<"$TASK")
+
+    # --- update state.json FIRST so git add picks it up ---
     jq --arg id "$TASK_ID" --arg now "$NOW" '
         .current_task = null
       | .tasks[$id].state = "done"
@@ -127,20 +138,37 @@ if (( RC == 0 )); then
       | .updated_at = $now
     ' <<<"$STATE" | harness_state_write
 
-    COMMIT_MSG="$CTYPE($TASK_ID): $TITLE
+    # --- SCOPED git add: only task-declared paths + state.json ---
+    SCOPED_PATHS=(".claude/harness/state.json")
+    while IFS= read -r p; do
+        [[ -n "$p" && -e "$p" ]] && SCOPED_PATHS+=("$p")
+    done < <(jq -r '((.files.creates // []) + (.files.modifies // [])) | .[]?' <<<"$TASK")
 
-task_id: $TASK_ID
-state: in_progress → done
-hooks_passed: $HOOKS_PASSED
-attempts: $ATTEMPTS"
-
-    if ! git add -A >/dev/null 2>&1; then
-        printf 'HARNESS_INFRA_ERROR reason=git_add_failed task=%s\n' "$TASK_ID" >&2
-        exit 2
+    # detect out-of-scope dirty files (warning, non-blocking)
+    OUT_OF_SCOPE=()
+    while IFS= read -r f; do
+        [[ -z "$f" ]] && continue
+        local_in=0
+        for p in "${SCOPED_PATHS[@]}"; do
+            [[ "$f" == "$p" ]] && local_in=1 && break
+        done
+        (( local_in == 0 )) && OUT_OF_SCOPE+=("$f")
+    done < <(git status --porcelain | awk '{print $NF}')
+    if (( ${#OUT_OF_SCOPE[@]} > 0 )); then
+        printf 'HARNESS_SCOPE_WARNING reason=out_of_scope_changes count=%d files=%s\n' \
+            "${#OUT_OF_SCOPE[@]}" "$(IFS=,; printf '%s' "${OUT_OF_SCOPE[*]}")"
     fi
+
+    git add -- "${SCOPED_PATHS[@]}" 2>/dev/null || true
+
+    # --- compose commit message ---
+    STAT=$(git diff --cached --stat 2>/dev/null || true)
+    COMMIT_MSG="$CTYPE($TASK_ID): $SUBJECT"
+    [[ -n "$COMMIT_BODY" ]] && COMMIT_MSG="$(printf '%s\n\n%s' "$COMMIT_MSG" "$COMMIT_BODY")"
+    COMMIT_MSG="$(printf '%s\n\nFiles:\n%s\n\ntask_id: %s\nstate: in_progress → done\nhooks_passed: %s\nattempts: %s' \
+        "$COMMIT_MSG" "$STAT" "$TASK_ID" "$HOOKS_PASSED" "$ATTEMPTS")"
+
     if ! git commit -m "$COMMIT_MSG" >/dev/null 2>&1; then
-        # possible cause: nothing to commit (shouldn't happen — state.json changed).
-        # Fall back to --allow-empty so we never leave a done-in-state-but-no-commit gap.
         git commit --allow-empty -m "$COMMIT_MSG" >/dev/null 2>&1 || {
             printf 'HARNESS_INFRA_ERROR reason=git_commit_failed task=%s\n' "$TASK_ID" >&2
             exit 2
