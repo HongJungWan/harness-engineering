@@ -28,17 +28,11 @@
           }
         ]
       }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          { "type": "command", "command": ".claude/harness/scripts/commit-and-advance.sh" }
-        ]
-      }
     ]
   },
   "permissions": {
     "allow": [
+      "Bash(.claude/scripts/*.sh:*)",
       "Bash(.claude/harness/scripts/*.sh:*)"
     ]
   }

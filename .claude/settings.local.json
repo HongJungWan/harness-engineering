@@ -34,7 +34,8 @@
       "Bash(.claude/harness/scripts/commit-and-advance.sh)",
       "Bash(awk ' *)",
       "Bash(.claude/harness/scripts/check.sh --all --with-build)",
-      "Bash(tail -10 .claude/harness/logs/hook-*.log)"
+      "Bash(tail -10 .claude/harness/logs/hook-*.log)",
+      "Bash(tail *)"
     ]
   },
   "enableAllProjectMcpServers": true,

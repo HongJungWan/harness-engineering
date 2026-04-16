@@ -1,7 +1,7 @@
 {
   "version": 1,
   "plan_sha256": "cbc7619a900f3bc28b6b7fb435eae235392ef8c592e53ebf4a37f15519cd7231",
-  "current_task": null,
+  "current_task": "ORDER-003",
   "tasks": {
     "SHARED-001": {
       "state": "done",
@@ -40,8 +40,9 @@
       "completed_at": "2026-04-16T02:23:23Z"
     },
     "ORDER-003": {
-      "state": "pending",
-      "attempts": 0
+      "state": "in_progress",
+      "attempts": 1,
+      "started_at": "2026-04-16T02:32:35Z"
     },
     "OUTBOX-001": {
       "state": "pending",
@@ -68,5 +69,5 @@
       "attempts": 0
     }
   },
-  "updated_at": "2026-04-16T02:23:23Z"
+  "updated_at": "2026-04-16T02:32:35Z"
 }
