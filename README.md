@@ -144,14 +144,14 @@ Go 1.25 · MySQL 8.0 · Apache Kafka (KRaft) · Docker · sqlx · sarama · shop
         ├── next-task.sh               # UserPromptSubmit → 다음 task 선택 + 컨텍스트 주입
         ├── validate-plan.sh           # PreToolUse → DAG 불변식 검증 (Plan.md 편집 시)
         ├── check.sh                   # PostToolUse → 12 arch 규칙 + go-build/test/vet
-        └── commit-and-advance.sh      # Stop → scope-limited 커밋 + 상태 전이 + escalation
+        └── commit-and-advance.sh      # Stop → 상태 전이 + failure streak + escalation (커밋은 사용자가 직접)
 ```
 
 **한 iteration 의 흐름:**
-1. 사용자 프롬프트 제출 → `next-task.sh` 가 현재 task + exit_criteria 를 에이전트 컨텍스트에 주입
-2. 에이전트가 파일 편집 → `check.sh` 가 해당 파일에 적용되는 규칙만 즉시 검증
-3. 턴 종료 → `commit-and-advance.sh` 가 전체 규칙 통과 확인 후 **task 선언 파일만** 커밋 + 상태 전이
-4. 실패 시 → `last-failure.json` 에 기록, 다음 턴에 04_Fix.md 의 recipe 참조 주입, 3회 연속 실패 시 blocked 처리
+1. 사용자 프롬프트 제출 → `next-task.sh` 가 현재 task + exit_criteria 를 에이전트 컨텍스트에 주입 **(Plan)**
+2. 에이전트가 파일 편집 → `check.sh` 가 해당 파일에 적용되는 12개 arch 규칙을 즉시 검증 **(Code + Hook)**
+3. 턴 종료 → `commit-and-advance.sh` 가 전체 규칙 통과 확인 후 상태 전이 `in_progress → done` (커밋은 사용자가 직접 수행)
+4. 실패 시 → `last-failure.json` 에 기록, 다음 턴에 `04_Fix.md` 의 recipe 참조 주입, 3회 연속 같은 reason 실패 시 `blocked` 처리 **(Fix)**
 
 **도구 의존성:** `jq`, `python3` + `PyYAML` (preflight 에서 자동 확인)
 
@@ -213,13 +213,13 @@ make build && make run  # 서버 실행 (:8080)
 
 ## 문서
 
-| Phase | 문서 | 내용 |
+| Phase | 문서 | 역할 |
 |---|---|---|
 | Design | [`docs/00_Design.md`](docs/00_Design.md) | DDD/EDA/고부하 설계 내러티브 + BDD 시나리오 6종 (배경 문서, 1회 읽기) |
-| Plan | [`docs/01_Plan.md`](docs/01_Plan.md) | Task DAG yaml + state.json 스키마 + next-task 알고리즘 + 13 부트스트랩 task |
-| Code | [`docs/02_Code.md`](docs/02_Code.md) | 디렉토리 제약, 패키지 의존성 규칙, 비관적 락 트랜잭션 플로우, 코딩 컨벤션 |
-| Hook | [`docs/03_Hook.md`](docs/03_Hook.md) | 테스트 인프라 설계, 동시성 barrier, Eventually 폴링, 6개 검증 Hook |
-| Fix | [`docs/04_Fix.md`](docs/04_Fix.md) | CI 체크리스트, 12개 자동 아키텍처 검증, 리뷰 프로세스 |
+| Plan | [`docs/01_Plan.md`](docs/01_Plan.md) | Task DAG yaml + state.json 스키마 + next-task 알고리즘 + 13 부트스트랩 task (매 턴 `next-task.sh` 가 파싱) |
+| Code | [`docs/02_Code.md`](docs/02_Code.md) | 12개 규칙 패턴 레지스트리 (forbidden/required regex + glob + severity) + 파일 템플릿 (매 편집 시 `check.sh` 가 참조) |
+| Hook | [`docs/03_Hook.md`](docs/03_Hook.md) | 5개 hook 인벤토리 + `settings.json` 배선 + `HARNESS_*` stdout 문법 (hook 설정 시 참조) |
+| Fix | [`docs/04_Fix.md`](docs/04_Fix.md) | `reason_key` → recipe lookup 16행 + 3-strike escalation 규칙 (규칙 위반 시 `next-task.sh` 가 recipe 주입) |
 | Review | [`docs/05_Review.md`](docs/05_Review.md) | 독립 검증 보고서 (준수율 95%, 잔여 갭 3건 LOW) |
 
 ---

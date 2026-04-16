@@ -63,37 +63,36 @@ The 5 docs under `docs/` are not prose; they are **machine contracts** that hook
 
 Each doc ends with a **"실행 아티팩트 매핑"** section enumerating the scripts/files that materialize it under `.claude/harness/`. Phase 2 implementation should be transcription, not redesign.
 
-### Runtime layout (Phase 2)
+### Runtime layout
 
 ```
 .claude/
-├── settings.json                      # Hook wiring (Phase 2, TBD)
+├── settings.json                      # Hook wiring (4 hooks → 4 scripts)
 ├── settings.local.json                # user's local overrides (do not touch)
 └── harness/
-    ├── state.json                     # current task + per-task state (git-tracked)
-    ├── last-failure.json              # most recent HARNESS_HOOK_FAIL (transient)
+    ├── state.json                     # current task + per-task state
+    ├── last-failure.json              # most recent HARNESS_HOOK_FAIL (transient, gitignored)
     ├── lib/
     │   ├── common.sh                  # shared bash helpers (sourced)
-    │   └── plan-to-json.py            # yaml fence in Plan.md → JSON
+    │   ├── plan-to-json.py            # yaml fence in Plan.md → JSON
+    │   └── dfs-cycle.py               # DAG cycle detection for validate-plan
     ├── scripts/
     │   ├── next-task.sh               # UserPromptSubmit — pick & inject current task
     │   ├── validate-plan.sh           # PreToolUse on docs/01_Plan.md — DAG invariants
     │   ├── check.sh                   # PostToolUse — run applicable rules
-    │   ├── commit-and-advance.sh      # Stop — (not yet implemented)
-    │   └── escalate.sh                # (not yet implemented)
-    ├── logs/hook-<date>.log           # append-only stderr sink
-    ├── recipes/<reason>.md            # per-reason recipe (not yet populated)
-    └── blocked/<task_id>.md           # escalation dumps
+    │   └── commit-and-advance.sh      # Stop — state transition + failure streak + escalation (커밋은 안 함)
+    ├── logs/hook-<date>.log           # append-only stderr sink (gitignored)
+    └── blocked/<task_id>.md           # escalation dumps (gitignored)
 ```
 
 ### Loop (one iteration)
 
-1. `UserPromptSubmit` → `next-task.sh` emits `<harness-context>` with current task + exit_criteria + last failure
+1. `UserPromptSubmit` → `next-task.sh` emits `<harness-context>` with current task + exit_criteria + last failure recipe hint
 2. Agent edits files (`Write` / `Edit`)
 3. `PostToolUse` → `check.sh <file>` runs applicable rules; first FAIL lands in `last-failure.json`
-4. On failure the next turn's `next-task.sh` + `last-failure-context.sh` inject the recipe; agent applies, retries
-5. `Stop` → `commit-and-advance.sh` (TBD) verifies all `exit_criteria`, commits per §5 of `01_Plan.md`, transitions `in_progress → done`
-6. Same `reason` 3× consecutively → `escalate.sh` marks task `blocked`, human unblocks
+4. On failure the next turn's `next-task.sh` injects the recipe hint from `04_Fix.md`; agent applies, retries
+5. `Stop` → `commit-and-advance.sh` runs full `check.sh`; all pass → state transition `in_progress → done` (커밋은 사용자가 직접 수행)
+6. Same `reason` 3× consecutively → task `blocked` + `.claude/harness/blocked/<id>.md` 덤프, human unblocks
 
 ### Tool dependencies
 
@@ -101,16 +100,8 @@ Phase 2 scripts require: `python3` (with PyYAML), `jq`, standard POSIX tools. Pr
 
 ### Git convention
 
-One task = one commit. Trailer format (enforced by `commit-and-advance.sh`, reconstructible via `git log`):
-
-```
-<type>(<task_id>): <subject>
-
-task_id: <ID>
-state: <from> → <to>
-hooks_passed: ddd-1,ddd-2,go-build,go-test
-attempts: <N>
-```
+커밋은 하네스가 하지 않음 — **사용자가 직접 수행**. 하네스는 state/rules/checks/remediation 만 담당.
+커밋 시 `docs/01_Plan.md §6` 의 task 별 `commit_subject` / `commit_body` 를 참고하면 일관된 메시지 유지 가능.
 
 ## Architecture
 

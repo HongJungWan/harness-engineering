@@ -4,28 +4,40 @@
   "current_task": null,
   "tasks": {
     "SHARED-001": {
-      "state": "pending",
-      "attempts": 0
+      "state": "done",
+      "attempts": 1,
+      "started_at": "2026-04-16T02:01:24Z",
+      "completed_at": "2026-04-16T02:02:32Z"
     },
     "SHARED-002": {
-      "state": "pending",
-      "attempts": 0
+      "state": "done",
+      "attempts": 1,
+      "started_at": "2026-04-16T02:03:24Z",
+      "completed_at": "2026-04-16T02:04:11Z"
     },
     "BALANCE-001": {
-      "state": "pending",
-      "attempts": 0
+      "state": "done",
+      "attempts": 1,
+      "started_at": "2026-04-16T02:05:20Z",
+      "completed_at": "2026-04-16T02:05:49Z"
     },
     "BALANCE-002": {
-      "state": "pending",
-      "attempts": 0
+      "state": "done",
+      "attempts": 1,
+      "started_at": "2026-04-16T02:06:13Z",
+      "completed_at": "2026-04-16T02:06:51Z"
     },
     "ORDER-001": {
-      "state": "pending",
-      "attempts": 0
+      "state": "done",
+      "attempts": 1,
+      "started_at": "2026-04-16T02:22:27Z",
+      "completed_at": "2026-04-16T02:22:47Z"
     },
     "ORDER-002": {
-      "state": "pending",
-      "attempts": 0
+      "state": "done",
+      "attempts": 1,
+      "started_at": "2026-04-16T02:22:53Z",
+      "completed_at": "2026-04-16T02:23:23Z"
     },
     "ORDER-003": {
       "state": "pending",
@@ -56,5 +68,5 @@
       "attempts": 0
     }
   },
-  "updated_at": "2026-04-16T01:59:48Z"
+  "updated_at": "2026-04-16T02:23:23Z"
 }
